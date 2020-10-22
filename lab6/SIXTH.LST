@@ -1,0 +1,180 @@
+Turbo Assembler	 Version 4.0	    04/22/20 17:18:04	    Page 1
+sixth.ASM
+
+
+
+      1				     ; Лабораторна робота 6
+      2				     ; Виконав Главацький О. С.. гр. ТМ-91 Дата 22.04.2020
+      3				     ; Арифметичні команди
+      4				     ; Обчислення формули  z =	(-2 * c	- d + 53) / (a / 4 - 1)
+      5
+      6				     ;
+      7				     ;
+      8				     ;				     a = 8
+      9				     ;				     c = 5
+     10				     ;				     d = 33
+     11				     ;				     z = 10
+     12				     ;
+     13				     ;
+     14
+     15
+     16	0000			     .model small
+     17	0000			     .stack 100h
+     18
+     19	0000			     .data
+     20	0000  0008			     a dw 8
+     21	0002  0005			     c dw 5
+     22	0004  0021			     d dw 33
+     23	0006  ????			     z dw ?
+     24
+     25	0008  ????			     up	dw ?
+     26	000A  ????			     down dw ?
+     27
+     28	000C  45 72 72 6F 72 21	20+	     message db	'Error!	Division by zero.$'  ; оголошення повідомлення+
+     29	      44 69 76 69 73 69	6F+  помилки в разі, якщо знаменник буде рівний нулеві
+     30	      6E 20 62 79 20 7A	65+
+     31	      72 6F 2E 24
+     32
+     33
+     34	0025			     .code
+     35	0000			     begin:
+     36					     ; z = (-2 * c - d + 53) / (a / 4 -	1)
+     37
+     38	0000  B8 0000s			     mov ax, @data
+     39	0003  8E D8			     mov ds, ax
+     40
+     41					     ; down = a	/ 4
+     42	0005  C7 06 000Ar 0004		     mov down, 4		      ;	обчислення d/2, записуємо в	    +
+     43				     змінну числове значення
+     44	000B  A1 0000r			     mov ax, a			   ; записуємо	змінну d в регістр ax
+     45	000E  99			     cwd			   ; команда перетворення байта	в  +
+     46				     слово
+     47	000F  F7 3E 000Ar		     idiv down			      ;	команда ділення на up
+     48	0013  A3 000Ar			     mov down, ax		      ;	записуємо результат в	    +
+     49				     змінну z
+     50
+     51					     ; down-- =	(a / 4 - 1)
+     52	0016  FF 0E 000Ar		     dec down
+     53
+     54					     ; up = -2 * c
+     55	001A  C7 06 0008r FFFE		     mov up, -2
+     56	0020  A1 0002r			     mov ax, c
+     57	0023  F7 2E 0008r		     imul up
+Turbo Assembler	 Version 4.0	    04/22/20 17:18:04	    Page 2
+sixth.ASM
+
+
+
+     58
+     59					     ; up = -2 * c - d
+     60	0027  A1 0004r			     mov ax, d
+     61	002A  19 06 0008r		     sbb up, ax
+     62
+     63					     ; up = -2 * c - d + 53
+     64	002E  83 16 0008r 35		     adc up, 53
+     65
+     66					     ; z = up /	down
+     67	0033  A1 0008r			     mov ax, up
+     68	0036  F7 3E 000Ar		     idiv down
+     69	003A  A3 0006r			     mov z, ax
+     70
+     71
+     72	003D  50			     push ax
+     73
+     74	003E  3D 0000			     cmp ax, 0
+     75	0041  79 09			     jns @plus	  ; перевіряємо число позитивне чи		    +
+     76				     від’ємне
+     77
+     78	0043  B4 02			     mov ah, 02h
+     79	0045  B2 2D			     mov dl, '-'  ; число від’ємне, виводимо знак "-"
+     80	0047  CD 21			     int 21h
+     81
+     82	0049  58			     pop ax
+     83	004A  F7 D8			     neg ax	  ; перетворюємо від’ємне число у		    +
+     84				     позитивне
+     85
+     86	004C			     @plus:
+     87	004C  33 C9			     xor cx, cx	  ; лічильник остач
+     88	004E  BB 000A			     mov bx, 10	  ; основа 10-ї системи счислення
+     89
+     90	0051			     @dvsn:
+     91	0051  33 D2			     xor dx, dx	  ; остача при	діленні
+     92	0053  F7 F3			     div bx	  ; виконуємо ділення на 10
+     93	0055  52			     push dx	  ; результат у зворотному порядку утворює+
+     94				     число	у новій системі счислення
+     95	0056  41			     inc cx
+     96	0057  85 C0			     test ax, ax	   ; перевіряємо чи ціла частина числа +
+     97				     дорівнює нулю
+     98	0059  75 F6			     jnz short @dvsn	   ; если нет нуля	 ; виконуємо ділення+
+     99				     поки ціла частина не дорівнює нулю
+    100	005B  B4 02			     mov ah, 02h	   ; виводимо остачу
+    101
+    102	005D			     @output:
+    103	005D  5A			     pop dx
+    104	005E  80 C2 30			     add dl, 30h  ; перетворюємо число	у символ, діапазон   +
+    105				     ASCI-коду чисел знаходиться 30h-39h
+    106	0061  CD 21			     int 21h
+    107	0063  E2 F8			     loop @output  ; повторюємо вивід
+    108	0065  EB 08 90			     jmp @end
+    109
+    110	0068			     @error:
+    111	0068  B4 09			     mov ah, 09h
+    112	006A  BA 000Cr			     mov dx, offset message  ; вивід повідомлення про помилку,   +
+    113				     якщо знаменник рівний 0
+    114	006D  CD 21			     int 21h
+Turbo Assembler	 Version 4.0	    04/22/20 17:18:04	    Page 3
+sixth.ASM
+
+
+
+    115
+    116	006F			     @end:
+    117	006F  B4 4C			     mov ah, 4ch
+    118	0071  CD 21			     int 21h
+    119
+    120				     end begin
+Turbo Assembler	 Version 4.0	    04/22/20 17:18:04	    Page 4
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "04/22/20"
+??FILENAME			  Text	 "sixth	  "
+??TIME				  Text	 "17:18:04"
+??VERSION			  Number 0400
+@32BIT				  Text	 0
+@CODE				  Text	 _TEXT
+@CODESIZE			  Text	 0
+@CPU				  Text	 0101H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@DVSN				  Near	 _TEXT:0051
+@END				  Near	 _TEXT:006F
+@ERROR				  Near	 _TEXT:0068
+@FILENAME			  Text	 SIXTH
+@INTERFACE			  Text	 00H
+@MODEL				  Text	 2
+@OUTPUT				  Near	 _TEXT:005D
+@PLUS				  Near	 _TEXT:004C
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+A				  Word	 DGROUP:0000
+BEGIN				  Near	 _TEXT:0000
+C				  Word	 DGROUP:0002
+D				  Word	 DGROUP:0004
+DOWN				  Word	 DGROUP:000A
+MESSAGE				  Byte	 DGROUP:000C
+UP				  Word	 DGROUP:0008
+Z				  Word	 DGROUP:0006
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  STACK				  16  0100 Para	  Stack	  STACK
+  _DATA				  16  0025 Word	  Public  DATA
+_TEXT				  16  0073 Word	  Public  CODE
+
